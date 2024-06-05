@@ -3,7 +3,7 @@ from bpy.types import Operator, Panel
 from bpy.props import EnumProperty, BoolProperty
 from bpy.app.translations import pgettext
 import bmesh
-import time
+# import time
 
 bl_info = {
     "name": "Mio3 Quick Symmetrize",
@@ -69,7 +69,7 @@ class MIO3_OT_quick_symmetrize(Operator):
         return self.execute(context)
 
     def execute(self, context):
-        start_time = time.time()
+        # start_time = time.time()
         self.obj = context.active_object
         obj = self.obj
 
@@ -171,7 +171,7 @@ class MIO3_OT_quick_symmetrize(Operator):
         if vart_count_1 != vart_count_2:
             self.report({"INFO"}, f"Vertex Count {vart_count_1} → {vart_count_2}")
 
-        print(f"Time: {time.time() - start_time}")
+        # print(f"Time: {time.time() - start_time}")
         return {"FINISHED"}
 
     # 頂点グループを作る
