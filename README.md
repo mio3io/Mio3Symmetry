@@ -1,0 +1,19 @@
+# Mio3 Quick Symmetrize
+
+マルチレゾを維持してメッシュ・シェイプキー・頂点グループ・UV・法線を対称化する Blender アドオン（JP/EN）
+
+[スクリプト版](https://gist.github.com/mio3io/94caffe4235959c9a9372134a79ea67b)を改良＆機能を追加してアドオン化しました。
+
+
+## 導入方法
+
+[Code > Download ZIP](https://github.com/mio3io/Mio3QuickSymmetrize/archive/master.zip) から ZIP ファイルをダウンロードします。
+Blender の `Edit > Preferences > Addons > Install` を開き、ダウンロードしたアドオンの ZIP ファイルを選択してインストールボタンを押します。インストール後、該当するアドオンの左側についているチェックボックスを ON にします。
+
+## 場所
+
+通常の「対称化」同様に対称となるメッシュを生成します。ミラーモディファイアは事前に適用する必要はありません。メッシュの選択状態に関わらず、オブジェクトのメッシュ全体に適用されます。
+
+## 場所
+
+右クリックメニューと、オブジェクトのメニューに「対称化＆リカバリー」が追加されます
