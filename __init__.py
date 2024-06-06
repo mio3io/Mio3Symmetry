@@ -3,6 +3,7 @@ from bpy.types import Operator, Panel
 from bpy.props import EnumProperty, BoolProperty
 from bpy.app.translations import pgettext
 import bmesh
+
 # import time
 
 bl_info = {
@@ -79,11 +80,7 @@ class MIO3_OT_quick_symmetrize(Operator):
 
         # 状態を保存
         if self.center and obj.location.x != 0:
-            bpy.context.scene.cursor.location = (
-                0,
-                self.original_location.y,
-                self.original_location.z,
-            )
+            bpy.context.scene.cursor.location = (0,) + self.original_location[1:]
             bpy.ops.object.origin_set(type="ORIGIN_CURSOR", center="MEDIAN")
             bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 
