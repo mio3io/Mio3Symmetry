@@ -4,12 +4,12 @@ from bpy.props import EnumProperty, BoolProperty
 from bpy.app.translations import pgettext
 import bmesh
 
-# import time
+import time
 
 bl_info = {
     "name": "Mio3 Quick Symmetrize",
     "author": "mio",
-    "version": (0, 9),
+    "version": (0, 9, 1),
     "blender": (3, 6, 0),
     "location": "View3D > Object",
     "description": "Symmetrizes meshes, shape keys, vertex groups, UVs, and normals while maintaining multi-resolution",
@@ -34,8 +34,6 @@ class MIO3_OT_quick_symmetrize(Operator):
             ("-X", "-X → +X", ""),
         ],
     )
-    vgroups: BoolProperty(name="Vertex Group", default=True)
-    shape_keys: BoolProperty(name="Shape Keys", default=True)
     normal: BoolProperty(name="Normal", default=True)
     uvmap: BoolProperty(name="UVMap", default=True)
     center: BoolProperty(name="Origin to Center", default=True)
@@ -70,7 +68,7 @@ class MIO3_OT_quick_symmetrize(Operator):
         return self.execute(context)
 
     def execute(self, context):
-        # start_time = time.time()
+        start_time = time.time()
         self.obj = context.active_object
         obj = self.obj
 
@@ -110,37 +108,39 @@ class MIO3_OT_quick_symmetrize(Operator):
 
         # 対称化
 
-        bpy.ops.mesh.reveal()
-        bpy.ops.mesh.select_all(action="SELECT")
-
-        if self.mode == "+X":
-            bpy.ops.mesh.symmetrize(direction="POSITIVE_X", threshold=1e-05)
-        else:
-            bpy.ops.mesh.symmetrize(direction="NEGATIVE_X", threshold=1e-05)
-
         bm = bmesh.from_edit_mesh(self.obj.data)
+
+        bmesh.ops.symmetrize(
+            bm,
+            input=bm.verts[:] + bm.edges[:] + bm.faces[:],
+            direction="X" if self.mode == "+X" else "-X",
+            use_shapekey=True,
+        )
         for v in bm.verts:
             v.select = False
+        for v in bm.verts:
+            if abs(v.co.x) < 0.000001:
+                v.select = True
+        center_verts = [v for v in bm.verts if v.select]
+        bmesh.ops.remove_doubles(bm, verts=center_verts, dist=0.000001)
+
+        for elem in bm.verts[:] + bm.edges[:] + bm.faces[:]:
+            elem.hide_set(False)
+            elem.select_set(False)
 
         select_condition = lambda x: x <= 0 if self.mode == "+X" else x >= 0
-        for i, v in enumerate(bm.verts):
+        for v in bm.verts:
             if select_condition(v.co.x):
                 v.select = True
-            #     self.main_verts.append(i)
-            # else:
-            #     self.sub_verts.append(i)
+
+        if self.uvmap:
+            self.symm_uv(bm)
+        self.symm_vgroups()
 
         bmesh.update_edit_mesh(self.obj.data)
 
-        self.create_temp_vgroup()
-
-        if self.uvmap:
-            self.symm_uv()
-        if self.vgroups:
-            self.symm_vgroups()
-        if self.shape_keys:
-            self.symm_shapekey()
         if self.normal:
+            self.create_temp_vgroup()
             self.symm_normal()
 
         # 状態を戻す
@@ -168,7 +168,7 @@ class MIO3_OT_quick_symmetrize(Operator):
         if vart_count_1 != vart_count_2:
             self.report({"INFO"}, f"Vertex Count {vart_count_1} → {vart_count_2}")
 
-        # print(f"Time: {time.time() - start_time}")
+        print(f"Quick Symmetrize Time: {time.time() - start_time}")
         return {"FINISHED"}
 
     # 頂点グループを作る
@@ -185,20 +185,29 @@ class MIO3_OT_quick_symmetrize(Operator):
         return self.vg
 
     # UV
-    def symm_uv(self):
-        mesh = self.obj.data
-        bm = bmesh.from_edit_mesh(mesh)
-        bm.faces.ensure_lookup_table()
+    def symm_uv(self, bm):
+        for v in bm.verts:
+            v.select = False
         bm.select_flush(False)
 
-        uv_layer = bm.loops.layers.uv.active
+        select_condition = lambda x: x < 0 if self.mode == "+X" else x > 0
+        for v in bm.verts:
+            if select_condition(v.co.x):
+                v.select = True
+                for f in v.link_faces:
+                    f.select = True
+
+        uv_layer = None
+        for uv in self.obj.data.uv_layers:
+            if uv.active_render:
+                uv_layer = bm.loops.layers.uv[uv.name]
+                break
+        # uv_layer = bm.loops.layers.uv.active
         for face in bm.faces:
             if face.select:
                 for loop in face.loops:
                     uv_data = loop[uv_layer]
                     uv_data.uv.x = 1 - uv_data.uv.x
-
-        bmesh.update_edit_mesh(mesh)
 
     # 頂点ウェイト
     def symm_vgroups(self):
@@ -212,26 +221,6 @@ class MIO3_OT_quick_symmetrize(Operator):
             if from_group:
                 self.obj.vertex_groups.active_index = from_group.index
                 bpy.ops.object.vertex_group_mirror(use_topology=False)
-
-    # シェイプキー
-    def symm_shapekey(self):
-        if self.obj.data.shape_keys:
-            bpy.ops.object.mode_set(mode="OBJECT")
-            basis_key = self.obj.data.shape_keys.key_blocks[0]
-
-            if self.mode == "+X":
-                selected_verts = [
-                    v.index for v in self.obj.data.vertices if v.co.x <= 0
-                ]
-            else:
-                selected_verts = [v.index for v in self.obj.data.vertices if v.co.x > 0]
-
-            for i in selected_verts:
-                basis_co_x = basis_key.data[i].co.x
-                for shapekey in self.obj.data.shape_keys.key_blocks[1:]:
-                    shape_co_x = shapekey.data[i].co.x
-                    if basis_co_x != shape_co_x:
-                        shapekey.data[i].co.x = 2 * basis_co_x - shape_co_x
 
     # 法線
     def symm_normal(self):
@@ -254,8 +243,6 @@ class MIO3_OT_quick_symmetrize(Operator):
     def draw(self, context):
         layout = self.layout
         layout.prop(self, "mode")
-        layout.prop(self, "vgroups")
-        layout.prop(self, "shape_keys")
         layout.prop(self, "normal")
         layout.prop(self, "uvmap")
         layout.prop(self, "center")
