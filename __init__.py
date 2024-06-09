@@ -159,10 +159,8 @@ class MIO3_OT_quick_symmetrize(Operator):
             bpy.ops.object.mode_set(mode="OBJECT")
 
         vart_count_2 = len(self.obj.data.vertices)
-        if vart_count_1 != vart_count_2:
-            self.report({"INFO"}, f"Vertex Count {vart_count_1} → {vart_count_2}")
-
-        print(f"Quick Symmetrize Time: {time.time() - start_time}")
+        stime = time.time() - start_time
+        self.report({"INFO"}, f"Quick Symmetrize Vertex Count {vart_count_1} → {vart_count_2}  Time: {stime:.4f}")
         return {"FINISHED"}
 
     # 頂点グループを作る
