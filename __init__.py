@@ -115,14 +115,8 @@ class MIO3_OT_quick_symmetrize(Operator):
             input=bm.verts[:] + bm.edges[:] + bm.faces[:],
             direction="X" if self.mode == "+X" else "-X",
             use_shapekey=True,
+            dist=0.0001,
         )
-        for v in bm.verts:
-            v.select = False
-        for v in bm.verts:
-            if abs(v.co.x) < 0.000001:
-                v.select = True
-        center_verts = [v for v in bm.verts if v.select]
-        bmesh.ops.remove_doubles(bm, verts=center_verts, dist=0.000001)
 
         for elem in bm.verts[:] + bm.edges[:] + bm.faces[:]:
             elem.hide_set(False)
