@@ -165,6 +165,7 @@ class MIO3_OT_quick_symmetrize(Operator):
 
     # 頂点グループを作る
     def create_temp_vgroup(self):
+        bpy.context.scene.tool_settings.vertex_group_weight = 1
         if TempVGName in self.obj.vertex_groups:
             self.vg = self.obj.vertex_groups[TempVGName]
             self.obj.vertex_groups.active_index = self.vg.index
