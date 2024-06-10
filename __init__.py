@@ -7,12 +7,12 @@ import bmesh
 import time
 
 bl_info = {
-    "name": "Mio3 Quick Symmetrize",
+    "name": "Mio3 Quick Symmetry",
     "author": "mio",
     "version": (0, 9, 1),
     "blender": (3, 6, 0),
     "location": "View3D > Object",
-    "description": "Symmetrizes meshes, shape keys, vertex groups, UVs, and normals while maintaining multi-resolution",
+    "description": "Symmetrize meshes, shape keys, vertex groups, UVs, and normals while maintaining multi-resolution",
     "category": "Object",
 }
 
@@ -21,9 +21,9 @@ TempDataTransferName = "Mio3qsTempDataTransfer"
 
 
 class MIO3_OT_quick_symmetrize(Operator):
-    bl_idname = "object.mio3_quick_symmetrize"
-    bl_label = "Quick Symmetrize"
-    bl_description = "Symmetrizes meshes, shape keys, vertex groups, UVs, and normals"
+    bl_idname = "object.mio3_quick_symmetry"
+    bl_label = "Quick Symmetry"
+    bl_description = "Symmetrize meshes, shape keys, vertex groups, UVs, and normals"
     bl_options = {"REGISTER", "UNDO"}
 
     mode: EnumProperty(
@@ -160,7 +160,7 @@ class MIO3_OT_quick_symmetrize(Operator):
 
         vart_count_2 = len(self.obj.data.vertices)
         stime = time.time() - start_time
-        self.report({"INFO"}, f"Quick Symmetrize Vertex Count {vart_count_1} → {vart_count_2}  Time: {stime:.4f}")
+        self.report({"INFO"}, f"Quick Symmetry Vertex Count {vart_count_1} → {vart_count_2}  Time: {stime:.4f}")
         return {"FINISHED"}
 
     # 頂点グループを作る
@@ -205,12 +205,12 @@ class MIO3_OT_quick_symmetrize(Operator):
     # 頂点ウェイト
     def symm_vgroups(self):
         vgroups = self.obj.vertex_groups
-        suffixe = self.suffixes[0] if self.mode == "+X" else self.suffixes[1]
-        names = [
-            name for name in vgroups.keys() if name.lower().endswith(suffixe, True)
+        suffixes = self.suffixes[0] if self.mode == "+X" else self.suffixes[1]
+        suffixes = [
+            name for name in vgroups.keys() if name.lower().endswith(suffixes, True)
         ]
-        for from_name in names:
-            from_group = vgroups.get(from_name)
+        for suffix in suffixes:
+            from_group = vgroups.get(suffix)
             if from_group:
                 self.obj.vertex_groups.active_index = from_group.index
                 bpy.ops.object.vertex_group_mirror(use_topology=False)
@@ -252,12 +252,12 @@ def menu_transform(self, context):
 
 translation_dict = {
     "ja_JP": {
-        ("*", "Quick Symmetrize"): "対称化＆リカバリー",
-        ("*", "Symmetrizes meshes, shape keys, vertex groups, UVs, and normals"): "メッシュ・シェイプキー・頂点グループ・UV・法線を対称化",
+        ("*", "Quick Symmetry"): "対称化＆リカバリー",
+        ("*", "Symmetrize meshes, shape keys, vertex groups, UVs, and normals"): "メッシュ・シェイプキー・頂点グループ・UV・法線を対称化",
         ("*", "Remove Mirror Modifier"): "ミラーモディファイアを削除",
         ("*", "Origin to Center"): "原点を基準に対称化",
         ("*", "Object is not a mesh"): "オブジェクトがメッシュではありません",
-        ("*", "Symmetrizes meshes, shape keys, vertex groups, UVs, and normals while maintaining multi-resolution"): "マルチレゾを維持してメッシュ・シェイプキー・頂点グループ・UV・法線を対称化",
+        ("*", "Symmetrize meshes, shape keys, vertex groups, UVs, and normals while maintaining multi-resolution"): "マルチレゾを維持してメッシュ・シェイプキー・頂点グループ・UV・法線を対称化",
     }  # fmt: skip
 }
 
