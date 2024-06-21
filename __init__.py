@@ -160,7 +160,7 @@ class MIO3_OT_quick_symmetrize(Operator):
 
         vart_count_2 = len(self.obj.data.vertices)
         stime = time.time() - start_time
-        self.report({"INFO"}, f"Quick Symmetry Vertex Count {vart_count_1} → {vart_count_2}  Time: {stime:.4f}")
+        self.report({"INFO"}, f"Quick Symmetry Vertex Count {vart_count_1} → {vart_count_2}  Time: {stime:.4f}")  # fmt:skip
         return {"FINISHED"}
 
     # 頂点グループを作る
@@ -190,17 +190,16 @@ class MIO3_OT_quick_symmetrize(Operator):
                 for f in v.link_faces:
                     f.select = True
 
-        uv_layer = None
-        for uv in self.obj.data.uv_layers:
-            if uv.active_render:
-                uv_layer = bm.loops.layers.uv[uv.name]
-                break
-        # uv_layer = bm.loops.layers.uv.active
+        uv_layer = bm.loops.layers.uv.active
+
         for face in bm.faces:
-            if face.select:
-                for loop in face.loops:
-                    uv_data = loop[uv_layer]
-                    uv_data.uv.x = 1 - uv_data.uv.x
+            for loop in face.loops:
+                uv = loop[uv_layer]
+                # 中心はマージさせる
+                if abs(uv.uv.x - 0.5) < 0.0001:
+                    uv.uv.x = 0.5
+                if face.select:
+                    uv.uv.x = 1 - uv.uv.x
 
     # 頂点ウェイト
     def symm_vgroups(self):
