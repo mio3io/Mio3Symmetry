@@ -193,14 +193,9 @@ class MIO3_OT_quick_symmetrize(Operator):
 
     # UV
     def symm_uv(self, bm):
-        for v in bm.verts:
-            v.select = False
-        bm.select_flush(False)
-
         select_condition = lambda x: x < 0 if self.mode == "+X" else x > 0
         for v in bm.verts:
             if select_condition(v.co.x):
-                v.select = True
                 for f in v.link_faces:
                     f.select = True
 
