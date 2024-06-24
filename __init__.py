@@ -40,7 +40,10 @@ class MIO3_OT_quick_symmetrize(Operator):
     remove_mirror_mod: BoolProperty(name="Remove Mirror Modifier", default=True)
 
     threshold = 0.0001
-    suffixes = [("_r", ".r", "-r", " r", "right"), ("_l", ".l", "-l", " l", "left")]
+    suffixes = [
+        ("_r", ".r", "-r", " r", "right", "_R", ".R", "-R", " R", "Right"),
+        ("_l", ".l", "-l", " l", "left", "_L", ".L", "-L", " L", "Left"),
+    ]
 
     main_verts = []
     sub_verts = []
@@ -206,7 +209,7 @@ class MIO3_OT_quick_symmetrize(Operator):
         vgroups = self.obj.vertex_groups
         suffixes = self.suffixes[0] if self.mode == "+X" else self.suffixes[1]
         suffixes = [
-            name for name in vgroups.keys() if name.lower().endswith(suffixes, True)
+            name for name in vgroups.keys() if name.endswith(suffixes, True)
         ]
         for suffix in suffixes:
             from_group = vgroups.get(suffix)
