@@ -16,8 +16,8 @@ bl_info = {
     "category": "Object",
 }
 
-TempVGName = "Mio3qsTempVg"
-TempDataTransferName = "Mio3qsTempDataTransfer"
+TMP_VG_NAME = "Mio3qsTempVg"
+TMP_DATA_TRANSFER_NAME = "Mio3qsTempDataTransfer"
 
 
 class MIO3_OT_quick_symmetrize(Operator):
@@ -164,8 +164,8 @@ class MIO3_OT_quick_symmetrize(Operator):
         if self.original_cursor_location is not None:
             bpy.context.scene.cursor.location = self.original_cursor_location
 
-        if TempVGName in self.obj.vertex_groups:
-            self.obj.vertex_groups.remove(self.obj.vertex_groups[TempVGName])
+        if TMP_VG_NAME in self.obj.vertex_groups:
+            self.obj.vertex_groups.remove(self.obj.vertex_groups[TMP_VG_NAME])
 
         bpy.data.objects.remove(self.orgcopy, do_unlink=True)
 
@@ -180,12 +180,12 @@ class MIO3_OT_quick_symmetrize(Operator):
     # 頂点グループを作る
     def create_temp_vgroup(self):
         bpy.context.scene.tool_settings.vertex_group_weight = 1
-        if TempVGName in self.obj.vertex_groups:
-            self.vg = self.obj.vertex_groups[TempVGName]
+        if TMP_VG_NAME in self.obj.vertex_groups:
+            self.vg = self.obj.vertex_groups[TMP_VG_NAME]
             self.obj.vertex_groups.active_index = self.vg.index
             bpy.ops.object.vertex_group_remove_from(use_all_verts=True)
         else:
-            self.vg = self.obj.vertex_groups.new(name=TempVGName)
+            self.vg = self.obj.vertex_groups.new(name=TMP_VG_NAME)
             self.obj.vertex_groups.active_index = self.vg.index
         bpy.ops.object.vertex_group_assign()
 
@@ -233,7 +233,7 @@ class MIO3_OT_quick_symmetrize(Operator):
         self.orgcopy.scale[0] *= -1
         try:
             transfer_modifier = self.obj.modifiers.new(
-                name=TempDataTransferName, type="DATA_TRANSFER"
+                name=TMP_DATA_TRANSFER_NAME, type="DATA_TRANSFER"
             )
             transfer_modifier.object = self.orgcopy
             transfer_modifier.vertex_group = self.vg.name
@@ -253,7 +253,6 @@ class MIO3_OT_quick_symmetrize(Operator):
 
         if not obj.data.total_vert_sel:
             return
-
 
         if not key_blocks:
             return
@@ -285,24 +284,17 @@ class MIO3_OT_quick_symmetrize(Operator):
                                 shape=basis.name, blend=1, add=False
                             )
                             break
-            
-            # Basisデータが変わる対処 あとで変更
             obj.active_shape_key_index = 0
-            bpy.ops.mesh.blend_from_shape(
-                shape=basis.name, blend=1, add=False
-            )
         finally:
             reverse_names = {v: k for k, v in self.replace_names.items()}
             self.rename_shape_keys(obj, reverse_names)
             obj.use_mesh_mirror_x = original_use_mesh_mirror_x
-
 
     def rename_shape_keys(self, obj, dicts):
         if obj.data.shape_keys:
             for key in obj.data.shape_keys.key_blocks:
                 if key.name in dicts:
                     key.name = dicts[key.name]
-
 
     def draw(self, context):
         layout = self.layout
