@@ -19,7 +19,7 @@ bl_info = {
 
 translation_dict = {
     "ja_JP": {
-        ("*", "Quick Symmetry"): "対称化＆リカバリー",
+        ("*", "Mio3 Symmetry"): "対称化＆リカバリー",
         ("*", "Symmetrize meshes, shape keys, vertex groups, UVs, and normals"): "メッシュ・シェイプキー・頂点グループ・UV・法線を対称化",
         ("*", "UnSymmetrize L/R Facial ShapeKeys"): "L/Rの表情シェイプキーを非対称化",
         ("*", "Remove Mirror Modifier"): "ミラーモディファイアを削除",

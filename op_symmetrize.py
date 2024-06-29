@@ -10,8 +10,8 @@ TMP_DATA_TRANSFER_NAME = "Mio3qsTempDataTransfer"
 
 
 class MIO3_OT_quick_symmetrize(Operator):
-    bl_idname = "object.mio3_quick_symmetry"
-    bl_label = "Quick Symmetry"
+    bl_idname = "object.mio3_symmetry"
+    bl_label = "Mio3 Symmetry"
     bl_description = "Symmetrize meshes, shape keys, vertex groups, UVs, and normals"
     bl_options = {"REGISTER", "UNDO"}
 
@@ -167,7 +167,7 @@ class MIO3_OT_quick_symmetrize(Operator):
 
         vart_count_2 = len(self.obj.data.vertices)
         stime = time.time() - start_time
-        self.report({"INFO"}, f"Quick Symmetry Vertex Count {vart_count_1} → {vart_count_2}  Time: {stime:.4f}")  # fmt:skip
+        self.report({"INFO"}, f"Mio3 Symmetry Vertex Count {vart_count_1} → {vart_count_2}  Time: {stime:.4f}")  # fmt:skip
         return {"FINISHED"}
 
     # 頂点グループを作る
