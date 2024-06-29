@@ -1,4 +1,4 @@
-# Mio3 Quick Symmetry
+# Mio3 Symmetry
 
 メッシュ・シェイプキー・頂点グループ・UV・法線・マルチレゾを対称化する Blender アドオンです（JP/EN）
 
@@ -9,7 +9,7 @@
 
 ## 導入方法
 
-[Code > Download ZIP](https://github.com/mio3io/Mio3QuickSymmetry/archive/master.zip) から ZIP ファイルをダウンロードします。
+[Code > Download ZIP](https://github.com/mio3io/Mio3Symmetry/archive/master.zip) から ZIP ファイルをダウンロードします。
 Blender の `Edit > Preferences > Addons > Install` を開き、ダウンロードしたアドオンの ZIP ファイルを選択してインストールボタンを押します。インストール後、該当するアドオンの左側についているチェックボックスを ON にします。
 
 ## 機能

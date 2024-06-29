@@ -7,7 +7,7 @@ from . import op_uv_group
 from . import op_uv_preview
 
 bl_info = {
-    "name": "Mio3 Quick Symmetry",
+    "name": "Mio3 Symmetry",
     "author": "mio",
     "version": (0, 9, 2),
     "blender": (3, 6, 0),
