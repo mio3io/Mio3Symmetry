@@ -189,6 +189,8 @@ class MIO3_OT_quick_symmetrize(Operator):
         obj = self.obj
         deform_layer = bm.verts.layers.deform.active
         uv_layer = bm.loops.layers.uv.active
+        if not uv_layer:
+            return
 
         def mirror_uv(faces, u_co, offset_v):
             for face in faces:
