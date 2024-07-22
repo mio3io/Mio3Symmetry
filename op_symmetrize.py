@@ -137,7 +137,7 @@ class MIO3_OT_quick_symmetrize(Operator):
         if self.facial:
             self.unsymm_facial()
 
-        if self.normal:
+        if self.normal and self.obj.data.has_custom_normals:
             self.create_temp_vgroup()
             self.symm_normal()
 
