@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 id = "mio3_symmetry"
 name = "Mio3 Symmetry"
-version = "0.11.0"
+version = "0.12.0"
 tagline = "Mesh Symmetry Tools"
 maintainer = "Mio"
 type = "add-on"
@@ -9,4 +9,4 @@ tags = ["Mesh"]
 blender_version_min = "4.2.0"
 license = ["SPDX:GPL-3.0-or-later"]
 website = "https://github.com/mio3io/mio3_symmetry"
-copyright = ["2025 Mio"]
+copyright = ["2026 Mio"]
