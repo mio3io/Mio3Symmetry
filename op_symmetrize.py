@@ -4,7 +4,6 @@ import time
 import numpy as np
 from bpy.types import Operator
 from bpy.props import EnumProperty, BoolProperty
-from .common import NAME_ATTR_GROUP
 from .utils_mirror import parse_side_name, get_mirror_name
 
 TMP_VG_NAME = "Mio3qsTempVg"
@@ -163,9 +162,7 @@ class OBJECT_OT_mio3_symmetry(Operator):
 
     # UV
     def symm_uv(self, obj, bm):
-        uv_group = obj.mio3qs.uv_group
         uv_layer = bm.loops.layers.uv.active
-        p_layer = bm.faces.layers.int.get(NAME_ATTR_GROUP)
         if not uv_layer:
             return
 
@@ -180,41 +177,14 @@ class OBJECT_OT_mio3_symmetry(Operator):
                     return True
             return False
 
-        if not p_layer:
-            pivot_u = 0.5
-            for face in bm.faces:
-                if not face_on_source_side(face):
-                    continue
-                for loop in face.loops:
-                    uv = loop[uv_layer].uv
-                    dx = uv.x - pivot_u
-                    uv.x = pivot_u if abs(dx) < 1e-5 else pivot_u - dx
-        else:
-            coord_u = [it.uv_coord_u for it in uv_group.items]
-            offset_v = [it.uv_offset_v for it in uv_group.items]
-            u_len = len(coord_u)
-
-            for face in bm.faces:
-                if not face_on_source_side(face):
-                    continue
-
-                uv_group_idx = face[p_layer]
-                if uv_group_idx < 0 or uv_group_idx >= u_len:
-                    continue
-
-                pivot_u = coord_u[uv_group_idx]
-                off_v = offset_v[uv_group_idx]
-                if off_v:
-                    for loop in face.loops:
-                        uv = loop[uv_layer].uv
-                        dx = uv.x - pivot_u
-                        uv.x = pivot_u if abs(dx) < 1e-5 else pivot_u - dx
-                        uv.y += off_v
-                else:
-                    for loop in face.loops:
-                        uv = loop[uv_layer].uv
-                        dx = uv.x - pivot_u
-                        uv.x = pivot_u if abs(dx) < 1e-5 else pivot_u - dx
+        pivot_u = 0.5
+        for face in bm.faces:
+            if not face_on_source_side(face):
+                continue
+            for loop in face.loops:
+                uv = loop[uv_layer].uv
+                dx = uv.x - pivot_u
+                uv.x = pivot_u if abs(dx) < 1e-5 else pivot_u - dx
 
     # 頂点ウェイト
     def symm_vgroups(self, obj, bm):
