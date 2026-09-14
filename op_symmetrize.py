@@ -21,8 +21,7 @@ class OBJECT_OT_mio3_symmetry(Operator):
     direction: EnumProperty(name="Direction", default="+X", items=[("-X", "-X → +X", ""), ("+X", "-X ← +X", "")])
     normal: BoolProperty(name="Normal", default=False)
     uvmap: BoolProperty(name="UVMap", default=False)
-    facial: BoolProperty(name="UnSymmetrize L/R Facial ShapeKeys", default=False)
-    remove_mirror_mod: BoolProperty(name="Remove Mirror Modifier", default=True)
+    facial: BoolProperty(name="Asymmetrize L/R Facial ShapeKeys", default=False)
 
     _main_verts = []
     _sub_verts = []
@@ -63,10 +62,6 @@ class OBJECT_OT_mio3_symmetry(Operator):
             bpy.ops.object.origin_set(type="ORIGIN_CURSOR", center="MEDIAN")
             bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
         active_shape_key_index = obj.active_shape_key_index
-
-        for mod in obj.modifiers:
-            if self.remove_mirror_mod and mod.type == "MIRROR":
-                obj.modifiers.remove(mod)
 
         vart_count_1 = len(obj.data.vertices)
 
@@ -228,29 +223,17 @@ class OBJECT_OT_mio3_symmetry(Operator):
         select_condition = lambda x: x <= 0 if self.direction == "+X" else x >= 0
 
         for v in bm.verts:
-            if not v.select:
-                continue
-
-            if not select_condition(v.co.x):
+            if not (v.select and select_condition(v.co.x)):
                 continue
 
             weight_dict = v[deform_layer]
             if not weight_dict:
                 continue
 
-            temp_weights = {}
-            for vg_id, weight in weight_dict.items():
-                if vg_id in symmetric_groups:
-                    symmetric_id = symmetric_groups[vg_id]
-                    if symmetric_id != vg_id:
-                        temp_weights[vg_id] = weight
-                        weight_dict[vg_id] = weight_dict.get(symmetric_id, 0.0)
-
-            for vg_id, weight in temp_weights.items():
-                symmetric_id = symmetric_groups[vg_id]
-                weight_dict[symmetric_id] = weight
-                if not weight_dict[vg_id]:
-                    del weight_dict[vg_id]
+            original = dict(weight_dict)
+            weight_dict.clear()
+            for vg_id, weight in original.items():
+                weight_dict[symmetric_groups.get(vg_id, vg_id)] = weight
 
     # 法線
     def symm_normal(self, obj, orgcopy, vg_name):
@@ -378,7 +361,6 @@ class OBJECT_OT_mio3_symmetry(Operator):
         col.prop(self, "normal")
         col.prop(self, "uvmap")
         col.prop(self, "facial")
-        col.prop(self, "remove_mirror_mod")
 
 
 classes = [OBJECT_OT_mio3_symmetry]
