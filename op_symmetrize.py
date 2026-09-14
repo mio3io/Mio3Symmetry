@@ -7,8 +7,6 @@ from bpy.props import EnumProperty, BoolProperty
 from mathutils import Matrix, kdtree
 from .utils_mirror import parse_side_name, get_mirror_name
 
-TMP_VG_NAME = "Mio3qsTempVg"
-TMP_DATA_TRANSFER_NAME = "Mio3qsTempDataTransfer"
 TMP_TAG_LAYER = "Mio3qsTempTag"
 MERGE_DIST = 1e-5
 MIRROR_FIND_DIST = 1e-4
@@ -95,12 +93,10 @@ class OBJECT_OT_mio3_symmetry(Operator):
                 key.value = 0
             obj.active_shape_key_index = 0
 
+        # 対称化前のループ法線を退避（対称化後に新しい面へ反転コピーする）
+        normal_ref = None
         if self.normal and obj.data.has_custom_normals:
-            orgcopy = obj.copy()
-            orgcopy.data = obj.data.copy()
-            context.collection.objects.link(orgcopy)
-        else:
-            orgcopy = None
+            normal_ref = self.capture_normals(obj.data)
 
         bm = bmesh.new()
         bm.from_mesh(obj.data)
@@ -138,11 +134,8 @@ class OBJECT_OT_mio3_symmetry(Operator):
 
         self.symm_vgroups(obj, bm, target_verts)
 
-        if self.normal and obj.data.has_custom_normals:
-            vg = self.create_temp_vgroup(obj, bm, target_verts)
-            vg_name = vg.name  # UnicodeDecodeError 対策 ※消すとエラーの可能性
-        else:
-            vg, vg_name = None, None
+        bm.faces.index_update()
+        target_face_indices = [f.index for f in target_faces]
 
         bm.verts.index_update()
         target_mask = np.zeros(len(bm.verts), dtype=bool)
@@ -157,8 +150,8 @@ class OBJECT_OT_mio3_symmetry(Operator):
         bm.free()
         obj.data.update()
 
-        if self.normal and obj.data.has_custom_normals and vg:
-            self.symm_normal(obj, orgcopy, vg_name)
+        if normal_ref is not None:
+            self.symm_normal(obj.data, normal_ref, target_face_indices)
 
         if self.facial:
             self.unsymm_facial(obj, target_mask)
@@ -172,14 +165,6 @@ class OBJECT_OT_mio3_symmetry(Operator):
             context.scene.cursor.location = original_cursor_location
 
         obj.active_shape_key_index = active_shape_key_index
-
-        if vg and vg_name in obj.vertex_groups:
-            obj.vertex_groups.remove(obj.vertex_groups[vg_name])
-
-        if orgcopy is not None:
-            copy_mesh = orgcopy.data
-            bpy.data.objects.remove(orgcopy, do_unlink=True)
-            bpy.data.meshes.remove(copy_mesh, do_unlink=True)
 
         vart_count_2 = len(obj.data.vertices)
         stime = time.time() - start_time
@@ -371,18 +356,89 @@ class OBJECT_OT_mio3_symmetry(Operator):
                         stack.append(lf)
         return region
 
-    def create_temp_vgroup(self, obj, bm, target_verts):
-        deform_layer = bm.verts.layers.deform.verify()
+    # 対称化前のループ法線を「頂点位置＋面中心」で引けるように退避する
+    def capture_normals(self, mesh):
+        n_v, n_l, n_p = len(mesh.vertices), len(mesh.loops), len(mesh.polygons)
 
-        if TMP_VG_NAME in obj.vertex_groups:
-            vg = obj.vertex_groups[TMP_VG_NAME]
-            obj.vertex_groups.remove(vg)
-        vg = obj.vertex_groups.new(name=TMP_VG_NAME)
+        co = np.empty(n_v * 3, dtype=np.float32)
+        mesh.vertices.foreach_get("co", co)
+        co = co.reshape(-1, 3)
 
-        for v in target_verts:
-            if v.co.x != 0.0:
-                v[deform_layer][vg.index] = 1.0
-        return vg
+        normals = np.empty(n_l * 3, dtype=np.float32)
+        mesh.loops.foreach_get("normal", normals)
+        normals = normals.reshape(-1, 3)
+
+        loop_vert = np.empty(n_l, dtype=np.int32)
+        mesh.loops.foreach_get("vertex_index", loop_vert)
+
+        centers = np.empty(n_p * 3, dtype=np.float32)
+        mesh.polygons.foreach_get("center", centers)
+        centers = centers.reshape(-1, 3)
+        loop_total = np.empty(n_p, dtype=np.int32)
+        mesh.polygons.foreach_get("loop_total", loop_total)
+        loop_centers = np.repeat(centers, loop_total, axis=0)
+
+        kd = kdtree.KDTree(n_v)
+        for i, c in enumerate(co):
+            kd.insert(c, i)
+        kd.balance()
+
+        loops_by_vert = {}
+        for li, vi in enumerate(loop_vert.tolist()):
+            loops_by_vert.setdefault(vi, []).append(li)
+
+        return {"kd": kd, "normals": normals, "loop_centers": loop_centers, "loops_by_vert": loops_by_vert}
+
+    # 法線
+    def symm_normal(self, mesh, ref, target_face_indices):
+        kd = ref["kd"]
+        ref_normals = ref["normals"]
+        ref_centers = ref["loop_centers"]
+        loops_by_vert = ref["loops_by_vert"]
+        threshold_sq = MIRROR_FIND_DIST * MIRROR_FIND_DIST
+
+        n_l = len(mesh.loops)
+        normals = np.empty(n_l * 3, dtype=np.float32)
+        mesh.loops.foreach_get("normal", normals)
+        normals = normals.reshape(-1, 3)
+
+        def lookup(co, center, flip):
+            if flip:
+                co = (-co[0], co[1], co[2])
+                center = np.array((-center[0], center[1], center[2]), dtype=np.float32)
+            _, idx, dist = kd.find(co)
+            if idx is None or dist > MIRROR_FIND_DIST:
+                return None
+            best, best_d = None, threshold_sq
+            for li in loops_by_vert.get(idx, ()):
+                d = float(np.sum((ref_centers[li] - center) ** 2))
+                if d < best_d:
+                    best, best_d = li, d
+            if best is None:
+                return None
+            n = ref_normals[best]
+            return (-n[0], n[1], n[2]) if flip else n
+
+        target_faces = set(target_face_indices)
+        affected_verts = set()
+        for pi in target_face_indices:
+            affected_verts.update(mesh.polygons[pi].vertices)
+
+        vertices = mesh.vertices
+        for p in mesh.polygons:
+            if p.index in target_faces:
+                flip = True
+            elif any(vi in affected_verts for vi in p.vertices):
+                flip = False
+            else:
+                continue
+            center = np.array(p.center, dtype=np.float32)
+            for li in p.loop_indices:
+                n = lookup(vertices[mesh.loops[li].vertex_index].co, center, flip)
+                if n is not None:
+                    normals[li] = n
+
+        mesh.normals_split_custom_set(normals.tolist())
 
     # UV
     def symm_uv(self, bm, target_faces):
@@ -411,22 +467,6 @@ class OBJECT_OT_mio3_symmetry(Operator):
             weight_dict.clear()
             for vg_id, weight in original.items():
                 weight_dict[symmetric_groups.get(vg_id, vg_id)] = weight
-
-    # 法線
-    def symm_normal(self, obj, orgcopy, vg_name):
-        orgcopy.scale[0] *= -1
-        try:
-            transfer_modifier = obj.modifiers.new(name=TMP_DATA_TRANSFER_NAME, type="DATA_TRANSFER")
-            transfer_modifier.object = orgcopy
-            transfer_modifier.vertex_group = vg_name
-            transfer_modifier.use_max_distance = True
-            transfer_modifier.max_distance = 0.0001
-            transfer_modifier.data_types_loops = {"CUSTOM_NORMAL"}
-            with bpy.context.temp_override(object=obj):
-                bpy.ops.object.modifier_apply(modifier=transfer_modifier.name)
-
-        finally:
-            orgcopy.scale[0] *= -1
 
     # 表情の非対称化
     def unsymm_facial(self, obj, vertex_mask):
